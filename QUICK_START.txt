@@ -1,0 +1,33 @@
+NPM COMPROMISE SCANNER - QUICK START
+=====================================
+
+IMPORTANT: Always use 'bash', not 'sh'!
+
+✓ CORRECT USAGE:
+  sudo bash scan-npm.sh
+  sudo ./scan-npm.sh
+
+✗ WRONG (script will detect and show error):
+  sudo sh scan-npm.sh
+
+WHY?
+The script uses bash 4+ features (associative arrays) that don't work with sh.
+The script now detects this automatically and shows a helpful error message.
+
+QUICK SCAN:
+  cd /home/dude/Work/npm-check
+  sudo bash scan-npm.sh
+
+CUSTOM SCAN:
+  sudo bash scan-npm.sh -d /home -o my-results.json --max-depth 15
+
+HELP:
+  bash scan-npm.sh --help
+
+OUTPUT:
+Results are saved to npm-scan-results.json (or your specified output file)
+
+SEVERITY LEVELS:
+  🚨 CRITICAL - Exact version match, immediate action required
+  ⚠️  WARNING  - Package exists but different version, review needed
+
