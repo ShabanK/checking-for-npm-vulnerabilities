@@ -237,6 +237,10 @@ function Scan-PackageLock {
         $content = Get-Content $FilePath -Raw -ErrorAction Stop
         $json = $content | ConvertFrom-Json -ErrorAction Stop
         
+        # Use regex objects to avoid parsing issues with @ symbol
+        $scopedPkgPattern = [regex]'node_modules/(@[^/]+/[^/]+)'
+        $normalPkgPattern = [regex]'node_modules/([^/]+)$'
+        
         if ($json.packages) {
             foreach ($pkg in $json.packages.PSObject.Properties) {
                 $pkgPath = $pkg.Name
@@ -247,9 +251,9 @@ function Scan-PackageLock {
                 }
                 
                 $pkgName = ""
-                if ($pkgPath -match 'node_modules/(@[^/]+/[^/]+)') {
+                if ($pkgPath -match $scopedPkgPattern) {
                     $pkgName = $matches[1]
-                } elseif ($pkgPath -match 'node_modules/([^/]+)$') {
+                } elseif ($pkgPath -match $normalPkgPattern) {
                     $pkgName = $matches[1]
                 } else {
                     continue
@@ -284,10 +288,14 @@ function Scan-YarnLock {
         $content = Get-Content $FilePath -ErrorAction Stop
         $currentPackage = ""
         
+        # Use regex objects to avoid parsing issues with @ symbol
+        $packagePattern = [regex]'^"?(@?[^@"]+)@.*"?:$'
+        $versionPattern = [regex]'^\s+version\s+"([^"]+)"'
+        
         foreach ($line in $content) {
-            if ($line -match '^"?(@?[^`@"]+)@.*"?:$') {
+            if ($line -match $packagePattern) {
                 $currentPackage = $matches[1]
-            } elseif ($line -match '^\s+version\s+"([^"]+)"' -and -not [string]::IsNullOrEmpty($currentPackage)) {
+            } elseif ($line -match $versionPattern -and -not [string]::IsNullOrEmpty($currentPackage)) {
                 $pkgVersion = $matches[1]
                 Test-CompromisedPackage -PackageName $currentPackage -PackageVersion $pkgVersion -FilePath $FilePath -FileType "yarn.lock"
                 $currentPackage = ""
