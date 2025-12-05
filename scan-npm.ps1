@@ -144,6 +144,10 @@ function Test-CompromisedPackage {
         [string]$DependencyType = ""
     )
     
+    if ([string]::IsNullOrEmpty($PackageName) -or [string]::IsNullOrEmpty($PackageVersion)) {
+        return
+    }
+    
     if (-not $CompromisedPackages.ContainsKey($PackageName)) {
         return
     }
@@ -281,7 +285,7 @@ function Scan-YarnLock {
         $currentPackage = ""
         
         foreach ($line in $content) {
-            if ($line -match '^"?(@?[^@"]+)@.*"?:$') {
+            if ($line -match '^"?(@?[^`@"]+)@.*"?:$') {
                 $currentPackage = $matches[1]
             } elseif ($line -match '^\s+version\s+"([^"]+)"' -and -not [string]::IsNullOrEmpty($currentPackage)) {
                 $pkgVersion = $matches[1]
@@ -513,21 +517,29 @@ function Generate-FindingsJson {
     
     $jsonFindings = @()
     foreach ($finding in $Findings) {
-        $jsonFindings += @"
-      {
-        "package_name": "$(Convert-ToJsonString $finding.package_name)",
-        "installed_version": "$(Convert-ToJsonString $finding.installed_version)",
-        "compromised_versions": $($finding.compromised_versions_json),
-        "detection_sources": $($finding.detection_sources_json),
-        "location": {
-          "type": "$(Convert-ToJsonString $finding.location.type)",
-          "path": "$(Convert-ToJsonString $finding.location.path)",
-          "dependency_type": "$(Convert-ToJsonString $finding.location.dependency_type)"
-        }
-      }
-"@
+        $pkgName = Convert-ToJsonString $finding.package_name
+        $instVer = Convert-ToJsonString $finding.installed_version
+        $compVers = $finding.compromised_versions_json
+        $detSrcs = $finding.detection_sources_json
+        $locType = Convert-ToJsonString $finding.location.type
+        $locPath = Convert-ToJsonString $finding.location.path
+        $depType = Convert-ToJsonString $finding.location.dependency_type
+        
+        $jsonText = "      {`n"
+        $jsonText += "        `"package_name`": `"$pkgName`",`n"
+        $jsonText += "        `"installed_version`": `"$instVer`",`n"
+        $jsonText += "        `"compromised_versions`": $compVers,`n"
+        $jsonText += "        `"detection_sources`": $detSrcs,`n"
+        $jsonText += "        `"location`": {`n"
+        $jsonText += "          `"type`": `"$locType`",`n"
+        $jsonText += "          `"path`": `"$locPath`",`n"
+        $jsonText += "          `"dependency_type`": `"$depType`"`n"
+        $jsonText += "        }`n"
+        $jsonText += "      }"
+        
+        $jsonFindings += $jsonText
     }
-    return $jsonFindings -join ",`n"
+    return ($jsonFindings -join ",`n")
 }
 
 $scanDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")

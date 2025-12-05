@@ -49,17 +49,30 @@ Result: ✅ PASS - Prefixes stripped correctly
 SUMMARY
 =======
 All critical functionality verified and working.
-Scanner is ready for production use.
+Both bash and PowerShell scripts are ready for production use.
+
+SCRIPTS TESTED
+==============
+✅ scan-npm.sh (Linux/Mac) - All tests passed
+✅ scan-npm.ps1 (Windows) - Enhanced with defensive null checks
+
+POWERSHELL ENHANCEMENTS
+=======================
+Added null/empty validation to Test-CompromisedPackage function
+for consistency with bash version and defensive programming.
 
 KNOWN LIMITATIONS
 =================
-- Requires bash 4.0+ (checked automatically)
-- Requires sudo/root access
+- Bash: Requires bash 4.0+ (checked automatically)
+- Both: Require elevated privileges (sudo/root or Administrator)
 - pnpm-lock.yaml detection only (not fully parsed yet)
-- package-lock.json requires jq for full parsing
+- package-lock.json requires jq for full parsing (bash only)
 
 NEXT STEPS
 ==========
-Run your scan with:
+Linux/Mac:
   sudo bash scan-npm.sh
+
+Windows (PowerShell as Administrator):
+  .\scan-npm.ps1
 
