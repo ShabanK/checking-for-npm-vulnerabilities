@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$Directory = "C:\Users",
+    [string[]]$Directories = @(),
     
     [Parameter(Mandatory=$false)]
     [string]$CsvPath = "",
@@ -13,10 +13,13 @@ param(
     [string]$OutputPath = "",
     
     [Parameter(Mandatory=$false)]
-    [int]$MaxDepth = 10,
+    [int]$MaxDepth = 999,
     
     [Parameter(Mandatory=$false)]
     [switch]$SkipGlobal,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$AllDrives,
     
     [Parameter(Mandatory=$false)]
     [switch]$Help
@@ -33,15 +36,18 @@ Scans system for compromised npm packages
 Usage: .\scan-npm.ps1 [OPTIONS]
 
 Options:
-  -Directory <path>         Starting directory (default: C:\Users)
+  -Directories <path[]>     Directory or directories to scan (default: all fixed drives)
+  -AllDrives                Scan all fixed drives on the system
   -CsvPath <path>           Path to CSV file (default: .\consolidated_iocs.csv)
   -OutputPath <path>        Output JSON file (default: .\npm-scan-results.json)
-  -MaxDepth <int>           Maximum directory depth (default: 10)
+  -MaxDepth <int>           Maximum directory depth (default: 999, effectively unlimited)
   -SkipGlobal              Skip scanning global npm packages
   -Help                     Show this help message
 
-Example:
-  .\scan-npm.ps1 -Directory C:\Users -OutputPath results.json -MaxDepth 15
+Examples:
+  .\scan-npm.ps1 -AllDrives                    # Scan all drives
+  .\scan-npm.ps1 -Directories C:\,D:\          # Scan specific drives
+  .\scan-npm.ps1 -Directories C:\Users         # Scan specific directory
 
 "@
     exit 0
@@ -62,10 +68,30 @@ if (-not (Test-Path $CsvPath)) {
     exit 1
 }
 
-if (-not (Test-Path $Directory)) {
-    Write-Error "Search directory not found: $Directory"
-    exit 1
+# Determine which directories to scan
+if ($AllDrives -or $Directories.Count -eq 0) {
+    Write-Host "Discovering all fixed drives..."
+    $Directories = Get-PSDrive -PSProvider FileSystem | Where-Object { 
+        $_.Root -match '^[A-Z]:\\$' -and 
+        (Test-Path $_.Root)
+    } | ForEach-Object { $_.Root }
+    
+    if ($Directories.Count -eq 0) {
+        Write-Error "No drives found to scan"
+        exit 1
+    }
+    
+    Write-Host "Found $($Directories.Count) drive(s) to scan: $($Directories -join ', ')"
 }
+
+# Validate all directories exist
+foreach ($dir in $Directories) {
+    if (-not (Test-Path $dir)) {
+        Write-Error "Search directory not found: $dir"
+        exit 1
+    }
+}
+
 
 $CompromisedPackages = @{}
 $CompromisedVersions = @{}
@@ -221,6 +247,7 @@ function Scan-PackageJson {
             }
         }
     } catch {
+        $script:Errors += "Error scanning $FilePath : $_"
     }
 }
 
@@ -441,7 +468,8 @@ function Scan-GlobalPackages {
 }
 
 Write-Host ""
-Write-Host "Starting system-wide scan from $Directory with max depth $MaxDepth..."
+Write-Host "Starting system-wide scan of $($Directories.Count) location(s) with max depth $MaxDepth..."
+Write-Host "Directories to scan: $($Directories -join ', ')"
 Write-Host ""
 
 Scan-GlobalPackages
@@ -449,7 +477,9 @@ Scan-GlobalPackages
 Write-Host ""
 Write-Host "Scanning local projects..."
 
-$excludeDirs = @('.git', '.svn', '.hg', 'vendor', '.cargo', '.rustup', 'Trash', 'Cache', 'Caches', 'AppData\Local\Temp')
+# Exclude these directories from recursive traversal
+# Note: node_modules is excluded from traversal but still scanned directly when found
+$excludeDirs = @('.git', '.svn', '.hg', 'vendor', '.cargo', '.rustup', 'Trash', 'Cache', 'Caches', 'AppData\Local\Temp', 'node_modules', 'bower_components')
 
 function Get-DirectoriesRecursive {
     param(
@@ -484,33 +514,48 @@ function Get-DirectoriesRecursive {
     }
 }
 
-$allDirs = @($Directory) + @(Get-DirectoriesRecursive -Path $Directory -CurrentDepth 0 -MaxDepth $MaxDepth)
-
-foreach ($dir in $allDirs) {
-    $packageJsonPath = Join-Path $dir "package.json"
-    $packageLockPath = Join-Path $dir "package-lock.json"
-    $yarnLockPath = Join-Path $dir "yarn.lock"
-    $pnpmLockPath = Join-Path $dir "pnpm-lock.yaml"
-    $nodeModulesPath = Join-Path $dir "node_modules"
+# Scan each directory/drive
+foreach ($scanRoot in $Directories) {
+    Write-Host ""
+    Write-Host "Scanning: $scanRoot"
     
-    if (Test-Path $packageJsonPath) {
-        Scan-PackageJson -FilePath $packageJsonPath
-    }
+    $allDirs = @($scanRoot) + @(Get-DirectoriesRecursive -Path $scanRoot -CurrentDepth 0 -MaxDepth $MaxDepth)
     
-    if (Test-Path $packageLockPath) {
-        Scan-PackageLock -FilePath $packageLockPath
-    }
+    Write-Host "Found $($allDirs.Count) directories to check in $scanRoot"
     
-    if (Test-Path $yarnLockPath) {
-        Scan-YarnLock -FilePath $yarnLockPath
-    }
-    
-    if (Test-Path $pnpmLockPath) {
-        Scan-PnpmLock -FilePath $pnpmLockPath
-    }
-    
-    if (Test-Path $nodeModulesPath) {
-        Scan-NodeModules -FilePath $nodeModulesPath
+    $dirCount = 0
+    foreach ($dir in $allDirs) {
+        $dirCount++
+        
+        if ($dirCount % 50 -eq 0) {
+            Write-Host "  Progress: Checked $dirCount / $($allDirs.Count) directories..."
+        }
+        
+        $packageJsonPath = Join-Path $dir "package.json"
+        $packageLockPath = Join-Path $dir "package-lock.json"
+        $yarnLockPath = Join-Path $dir "yarn.lock"
+        $pnpmLockPath = Join-Path $dir "pnpm-lock.yaml"
+        $nodeModulesPath = Join-Path $dir "node_modules"
+        
+        if (Test-Path $packageJsonPath) {
+            Scan-PackageJson -FilePath $packageJsonPath
+        }
+        
+        if (Test-Path $packageLockPath) {
+            Scan-PackageLock -FilePath $packageLockPath
+        }
+        
+        if (Test-Path $yarnLockPath) {
+            Scan-YarnLock -FilePath $yarnLockPath
+        }
+        
+        if (Test-Path $pnpmLockPath) {
+            Scan-PnpmLock -FilePath $pnpmLockPath
+        }
+        
+        if (Test-Path $nodeModulesPath) {
+            Scan-NodeModules -NodeModulesDir $nodeModulesPath
+        }
     }
 }
 
