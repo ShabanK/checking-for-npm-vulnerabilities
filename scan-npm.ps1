@@ -63,7 +63,7 @@ if ([string]::IsNullOrEmpty($OutputPath)) {
     $OutputPath = Join-Path $ScriptDir "npm-scan-results.json"
 }
 
-if (-not (Test-Path $CsvPath)) {
+if (-not (Test-Path -LiteralPath $CsvPath)) {
     Write-Error "CSV file not found: $CsvPath"
     exit 1
 }
@@ -86,7 +86,7 @@ if ($AllDrives -or $Directories.Count -eq 0) {
 
 # Validate all directories exist
 foreach ($dir in $Directories) {
-    if (-not (Test-Path $dir)) {
+    if (-not (Test-Path -LiteralPath $dir)) {
         Write-Error "Search directory not found: $dir"
         exit 1
     }
@@ -221,7 +221,7 @@ function Test-CompromisedPackage {
 function Scan-PackageJson {
     param([string]$FilePath)
     
-    if (-not (Test-Path $FilePath)) {
+    if (-not (Test-Path -LiteralPath $FilePath)) {
         return
     }
     
@@ -254,7 +254,7 @@ function Scan-PackageJson {
 function Scan-PackageLock {
     param([string]$FilePath)
     
-    if (-not (Test-Path $FilePath)) {
+    if (-not (Test-Path -LiteralPath $FilePath)) {
         return
     }
     
@@ -306,7 +306,7 @@ function Scan-PackageLock {
 function Scan-YarnLock {
     param([string]$FilePath)
     
-    if (-not (Test-Path $FilePath)) {
+    if (-not (Test-Path -LiteralPath $FilePath)) {
         return
     }
     
@@ -337,7 +337,7 @@ function Scan-YarnLock {
 function Scan-PnpmLock {
     param([string]$FilePath)
     
-    if (-not (Test-Path $FilePath)) {
+    if (-not (Test-Path -LiteralPath $FilePath)) {
         return
     }
     
@@ -347,7 +347,7 @@ function Scan-PnpmLock {
 function Scan-NodeModules {
     param([string]$NodeModulesDir)
     
-    if (-not (Test-Path $NodeModulesDir)) {
+    if (-not (Test-Path -LiteralPath $NodeModulesDir)) {
         return
     }
     
@@ -366,7 +366,7 @@ function Scan-NodeModules {
                     $scopedName = "$pkgName/$($scopedPkg.Name)"
                     $pkgJson = Join-Path $scopedPkg.FullName "package.json"
                     
-                    if (Test-Path $pkgJson) {
+                    if (Test-Path -LiteralPath $pkgJson) {
                         try {
                             $json = Get-Content $pkgJson -Raw | ConvertFrom-Json
                             if ($json.version) {
@@ -379,7 +379,7 @@ function Scan-NodeModules {
             } else {
                 $pkgJson = Join-Path $pkgDir.FullName "package.json"
                 
-                if (Test-Path $pkgJson) {
+                if (Test-Path -LiteralPath $pkgJson) {
                     try {
                         $json = Get-Content $pkgJson -Raw | ConvertFrom-Json
                         if ($json.version) {
@@ -417,7 +417,7 @@ function Scan-GlobalPackages {
     
     $globalNodeModules = Join-Path $npmPrefix "node_modules"
     
-    if (-not (Test-Path $globalNodeModules)) {
+    if (-not (Test-Path -LiteralPath $globalNodeModules)) {
         Write-Host "  Global node_modules not found at: $globalNodeModules"
         return
     }
@@ -437,7 +437,7 @@ function Scan-GlobalPackages {
                     $scopedName = "$pkgName/$($scopedPkg.Name)"
                     $pkgJson = Join-Path $scopedPkg.FullName "package.json"
                     
-                    if (Test-Path $pkgJson) {
+                    if (Test-Path -LiteralPath $pkgJson) {
                         try {
                             $json = Get-Content $pkgJson -Raw | ConvertFrom-Json
                             if ($json.version) {
@@ -451,7 +451,7 @@ function Scan-GlobalPackages {
             } else {
                 $pkgJson = Join-Path $pkgDir.FullName "package.json"
                 
-                if (Test-Path $pkgJson) {
+                if (Test-Path -LiteralPath $pkgJson) {
                     try {
                         $json = Get-Content $pkgJson -Raw | ConvertFrom-Json
                         if ($json.version) {
@@ -537,23 +537,23 @@ foreach ($scanRoot in $Directories) {
         $pnpmLockPath = Join-Path $dir "pnpm-lock.yaml"
         $nodeModulesPath = Join-Path $dir "node_modules"
         
-        if (Test-Path $packageJsonPath) {
+        if (Test-Path -LiteralPath $packageJsonPath) {
             Scan-PackageJson -FilePath $packageJsonPath
         }
         
-        if (Test-Path $packageLockPath) {
+        if (Test-Path -LiteralPath $packageLockPath) {
             Scan-PackageLock -FilePath $packageLockPath
         }
         
-        if (Test-Path $yarnLockPath) {
+        if (Test-Path -LiteralPath $yarnLockPath) {
             Scan-YarnLock -FilePath $yarnLockPath
         }
         
-        if (Test-Path $pnpmLockPath) {
+        if (Test-Path -LiteralPath $pnpmLockPath) {
             Scan-PnpmLock -FilePath $pnpmLockPath
         }
         
-        if (Test-Path $nodeModulesPath) {
+        if (Test-Path -LiteralPath $nodeModulesPath) {
             Scan-NodeModules -NodeModulesDir $nodeModulesPath
         }
     }
