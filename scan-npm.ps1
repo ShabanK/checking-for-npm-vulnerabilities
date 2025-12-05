@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 #Requires -RunAsAdministrator
 
 [CmdletBinding()]
@@ -238,8 +238,9 @@ function Scan-PackageLock {
         $json = $content | ConvertFrom-Json -ErrorAction Stop
         
         # Use regex objects to avoid parsing issues with @ symbol
-        $scopedPkgPattern = [regex]'node_modules/(@[^/]+/[^/]+)'
-        $normalPkgPattern = [regex]'node_modules/([^/]+)$'
+        $at = '@'
+        $scopedPkgPattern = [regex]::new('node_modules/(AT[^/]+/[^/]+)' -replace 'AT', $at)
+        $normalPkgPattern = [regex]::new('node_modules/([^/]+)$')
         
         if ($json.packages) {
             foreach ($pkg in $json.packages.PSObject.Properties) {
@@ -289,8 +290,9 @@ function Scan-YarnLock {
         $currentPackage = ""
         
         # Use regex objects to avoid parsing issues with @ symbol
-        $packagePattern = [regex]'^"?(@?[^@"]+)@.*"?:$'
-        $versionPattern = [regex]'^\s+version\s+"([^"]+)"'
+        $at = '@'
+        $packagePattern = [regex]::new(('^"?(AT?[^AT"]+)AT.*"?:$' -replace 'AT', $at))
+        $versionPattern = [regex]::new('^\s+version\s+"([^"]+)"')
         
         foreach ($line in $content) {
             if ($line -match $packagePattern) {

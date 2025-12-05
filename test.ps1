@@ -1,0 +1,1 @@
+﻿`$test = @"`r`n{\r`n}\r`n"`@\r`nWrite-Host `$test
