@@ -1,6 +1,8 @@
 NPM COMPROMISE SCANNER - QUICK START
 =====================================
 
+LINUX/MAC
+=========
 IMPORTANT: Always use 'bash', not 'sh'!
 
 ✓ CORRECT USAGE:
@@ -24,10 +26,55 @@ CUSTOM SCAN:
 HELP:
   bash scan-npm.sh --help
 
-OUTPUT:
+
+WINDOWS (PowerShell)
+====================
+IMPORTANT: Run PowerShell as Administrator!
+
+✓ QUICK SYSTEM-WIDE SCAN (All Drives):
+  .\scan-npm.ps1 -AllDrives
+
+✓ SCAN SPECIFIC DRIVES:
+  .\scan-npm.ps1 -Directories C:\,D:\
+
+✓ SCAN SPECIFIC DIRECTORY:
+  .\scan-npm.ps1 -Directories C:\Users\YourName\Projects
+
+✓ CUSTOM DEPTH:
+  .\scan-npm.ps1 -AllDrives -MaxDepth 50
+
+✓ SKIP GLOBAL NPM PACKAGES:
+  .\scan-npm.ps1 -AllDrives -SkipGlobal
+
+✓ SHOW HELP:
+  .\scan-npm.ps1 -Help
+
+AVAILABLE FLAGS:
+  -AllDrives           Scan all fixed drives (C:\, D:\, etc.)
+  -Directories <path[]> Scan specific directory/directories (comma-separated)
+  -MaxDepth <int>      Maximum directory depth (default: 999)
+  -SkipGlobal          Skip scanning global npm packages
+  -CsvPath <path>      Path to CSV file (default: .\consolidated_iocs.csv)
+  -OutputPath <path>   Output JSON file (default: .\npm-scan-results.json)
+  -Help                Show help message
+
+DEFAULT BEHAVIOR (no flags):
+  If you run .\scan-npm.ps1 without any flags, it will scan ALL fixed drives
+  with depth 999. This can take a long time!
+
+PERFORMANCE NOTES:
+  - Scanning all drives can take HOURS depending on your system
+  - Test with a single directory first: .\scan-npm.ps1 -Directories C:\Users\YourName
+  - node_modules directories are excluded from recursive traversal but still scanned
+  - Progress updates shown every 50 directories
+
+
+OUTPUT
+======
 Results are saved to npm-scan-results.json (or your specified output file)
 
 SEVERITY LEVELS:
   🚨 CRITICAL - Exact version match, immediate action required
   ⚠️  WARNING  - Package exists but different version, review needed
+
 
